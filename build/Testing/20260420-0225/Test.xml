@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260420-0225-Experimental"
+	Name="(empty)"
+	Generator="ctest-3.31.11"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Linux"
+	Hostname="fedora"
+	OSRelease="6.19.12-200.fc43.x86_64"
+	OSVersion="#1 SMP PREEMPT_DYNAMIC Sun Apr 12 15:26:33 UTC 2026"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="AuthenticAMD"
+	VendorID="Advanced Micro Devices"
+	FamilyID="25"
+	ModelID="68"
+	ModelName="AMD Ryzen 5 7535HS with Radeon Graphics"
+	ProcessorCacheSize="512"
+	NumberOfLogicalCPU="12"
+	NumberOfPhysicalCPU="6"
+	TotalVirtualMemory="8191"
+	TotalPhysicalMemory="30831"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="1914.7"
+	>
+	<Testing>
+		<StartDateTime>Apr 20 11:37 EEST</StartDateTime>
+		<StartTestTime>1776674237</StartTestTime>
+		<TestList>
+			<Test>./AllTests</Test>
+		</TestList>
+		<Test Status="passed">
+			<Name>AllTests</Name>
+			<Path>.</Path>
+			<FullName>./AllTests</FullName>
+			<FullCommandLine>/home/feetlover/C++/TCP/build/tcpserver_tests</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.00558284</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/home/feetlover/C++/TCP/build/tcpserver_tests</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value encoding="base64" compression="gzip">eJyNksFuwjAMhu99Ch9BiBYQlx12GUPTNA0mYBxWoSm0hkZL4ipxGdvTT11HVaqqnU+J/s+/HTurzBhpjqCFNL0+HCxpCBLSGBwQWdEJbTAbDILN7CXAM6M1QgVHoqNCRsfVo7NRcMxP77mZH0VeeFvGDlZ/lW4gZ1xRavp7AZdJRud74bCMHTwo2gtVAGhO0pLRaBgc8jBLa/C06roV9tHw3EQUoxfC6nUBv7G7Uvw3tOSFhQTLpyYZeiPQrt9istZCqUWm92hbvCpUt+Xmk+6+GF2L3wXpNnsW561QGbaYXZDS7F+DLWhgYqH63nXSuNhaJWdFmYk3VqZNrZZi1zQbwca2Wzpoa3xSfe2LiD6Q12ilUPK79pNqoj8jazHifCtLG9fb76Ib91hPmuuUv+4Fi3bvEmscTO2Fvu974SaRDlJhGegAnGAxO8o4zRg+hQOLmk4Yg5MmQpAMeI4QY1fAiUWXkIrz7PFoMoV9/jX9nfcDb31eXA==</Value>
+				</Measurement>
+			</Results>
+		</Test>
+		<EndDateTime>Apr 20 11:37 EEST</EndDateTime>
+		<EndTestTime>1776674237</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
