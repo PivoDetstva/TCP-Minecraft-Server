@@ -24,17 +24,13 @@ namespace mc::network
         explicit TcpClient(int socketFd);
         ~TcpClient();
 
-        void handle(); // main loop — reads and processes packets
+        void handle();
 
     private:
         int socketFd_;
-        std::vector<uint8_t> buffer_; // accumulates incoming bytes
+        std::vector<uint8_t> buffer_;
 
-        // reads raw bytes from socket into buffer_
         bool readBytes();
-
-        // tries to extract one complete packet from buffer_
-        // returns true if a complete packet was found
         bool tryReadPacket(mc::protocol::Packet &out);
     };
 

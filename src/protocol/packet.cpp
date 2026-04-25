@@ -30,4 +30,12 @@ namespace mc::protocol
 
         return {packetId, packetData};
     }
+
+    void writeInt32(std::vector<uint8_t> &data, int32_t value)
+    {
+        data.push_back((value >> 24) & 0xFF);
+        data.push_back((value >> 16) & 0xFF);
+        data.push_back((value >> 8) & 0xFF);
+        data.push_back((value >> 0) & 0xFF);
+    }
 }

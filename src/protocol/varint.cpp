@@ -4,7 +4,6 @@
 {
     std::vector<uint8_t> result;
 
-    // treat as unsigned so right shift behaves predictably
     uint32_t bits = static_cast<uint32_t>(value);
 
     do

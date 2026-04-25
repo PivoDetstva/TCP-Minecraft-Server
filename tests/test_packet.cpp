@@ -3,7 +3,6 @@
 
 using namespace mc::protocol;
 
-// serialize produces correct byte order: length, id, data
 TEST(PacketSerialize, CorrectByteOrder)
 {
     Packet p;
@@ -12,14 +11,11 @@ TEST(PacketSerialize, CorrectByteOrder)
 
     auto bytes = p.serialize();
 
-    // total length = 1 byte (id varint) + 3 bytes (data) = 4
-    // length varint of 4 = just 0x04
     EXPECT_EQ(bytes[0], 0x04); // length
     EXPECT_EQ(bytes[1], 0x00); // id
     EXPECT_EQ(bytes[2], 0x01); // data start
 }
 
-// round trip — serialize then deserialize gives back original
 TEST(PacketRoundTrip, SerializeDeserialize)
 {
     mc::protocol::Packet original;
@@ -33,7 +29,6 @@ TEST(PacketRoundTrip, SerializeDeserialize)
     EXPECT_EQ(restored.data, original.data);
 }
 
-// empty data payload is valid
 TEST(PacketSerialize, EmptyData)
 {
     Packet p;
@@ -47,7 +42,6 @@ TEST(PacketSerialize, EmptyData)
     EXPECT_EQ(restored.data.size(), 0);
 }
 
-// large packet ID needing 2 byte varint
 TEST(PacketRoundTrip, LargeId)
 {
     Packet original;
