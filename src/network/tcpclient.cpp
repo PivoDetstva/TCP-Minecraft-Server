@@ -11,7 +11,38 @@ namespace mc::network
             socketFd_ = -1;
         }
     }
+    void TcpClient::writeInt32(std::vector<uint8_t> &data, int32_t value)
 
+    {
+        data.push_back((value >> 24) & 0xFF);
+        data.push_back((value >> 16) & 0xFF);
+        data.push_back((value >> 8) & 0xFF);
+        data.push_back((value >> 0) & 0xFF);
+    }
+    void TcpClient::writeInt64(std::vector<uint8_t> &data, int64_t value)
+    {
+        data.push_back((value >> 56) & 0xFF);
+        data.push_back((value >> 48) & 0xFF);
+        data.push_back((value >> 40) & 0xFF);
+        data.push_back((value >> 32) & 0xFF);
+        data.push_back((value >> 24) & 0xFF);
+        data.push_back((value >> 16) & 0xFF);
+        data.push_back((value >> 8) & 0xFF);
+        data.push_back((value >> 0) & 0xFF);
+    }
+    void TcpClient::writeDouble(std::vector<uint8_t> &data, double value)
+    {
+        uint64_t bits;
+        std::memcpy(&bits, &value, sizeof(bits)); // reinterpret double bytes as uint64
+        writeInt64(data, static_cast<int64_t>(bits));
+    }
+
+    void TcpClient::writeFloat(std::vector<uint8_t> &data, float value)
+    {
+        uint32_t bits;
+        std::memcpy(&bits, &value, sizeof(bits)); // reinterpret float bytes as uint32
+        writeInt32(data, static_cast<int32_t>(bits));
+    }
     bool TcpClient::readBytes()
     {
         uint8_t temp[1024];
@@ -112,19 +143,74 @@ namespace mc::network
                             packet.data.begin() + lengthResult.bytesRead + lengthResult.value);
                         std::cout << "Player joining: " << username << "\n";
 
-                        std::string uuid = "00000000-0000-0000-0000-000000000000";
                         std::vector<uint8_t> data;
-
+                        // UUID with dashes — VarInt string
+                        std::string uuid = "00000000-0000-0000-0000-000000000000";
                         auto uuidLen = mc::protocol::encodeVarInt(uuid.size());
                         data.insert(data.end(), uuidLen.begin(), uuidLen.end());
                         data.insert(data.end(), uuid.begin(), uuid.end());
+
+                        // username — VarInt string
                         auto usernameLen = mc::protocol::encodeVarInt(username.size());
                         data.insert(data.end(), usernameLen.begin(), usernameLen.end());
                         data.insert(data.end(), username.begin(), username.end());
-
                         mc::protocol::Packet loginSuccess(0x02, data);
                         auto bytes = loginSuccess.serialize();
+                        std::cout << "LoginSuccess bytes: ";
+                        for (auto b : bytes)
+                        {
+                            std::cout << std::hex << (int)b << " ";
+                        }
+                        std::cout << std::dec << "\n";
+
                         send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+                        usleep(100000);
+
+                        state = ConnectionState::Play;
+
+                        std::vector<uint8_t> joinData;
+                        writeInt32(joinData, 1);
+
+                        joinData.push_back(0); // gamemode: survival
+                        joinData.push_back(0); // dimension: overworld
+                        joinData.push_back(0); // difficulty: peaceful
+                        joinData.push_back(5); // max players
+                        std::string levelType = "default";
+                        auto levelLen = mc::protocol::encodeVarInt(levelType.size());
+                        joinData.insert(joinData.end(), levelLen.begin(), levelLen.end());
+                        joinData.insert(joinData.end(), levelType.begin(), levelType.end());
+
+                        mc::protocol::Packet joinGame(0x01, joinData);
+                        auto joinBytes = joinGame.serialize();
+                        std::cout << "JoinGame bytes: ";
+                        for (auto b : joinBytes)
+                        {
+                            std::cout << std::hex << (int)b << " ";
+                        }
+                        std::cout << std::dec << "\n";
+                        send(socketFd_, joinBytes.data(), joinBytes.size(), MSG_NOSIGNAL);
+
+                        std::vector<uint8_t> spawnData;
+
+                        writeInt32(spawnData, 0);  // X
+                        writeInt32(spawnData, 64); // Y
+                        writeInt32(spawnData, 0);  // Z
+
+                        mc::protocol::Packet spawnPos(0x05, spawnData);
+                        auto spawnBytes = spawnPos.serialize();
+                        send(socketFd_, spawnBytes.data(), spawnBytes.size(), MSG_NOSIGNAL);
+
+                        std::vector<uint8_t> posLookData;
+                        writeDouble(posLookData, 0.0);  // X
+                        writeDouble(posLookData, 64.0); // Y (высота ног)
+                        writeDouble(posLookData, 0.0);  // Z
+                        writeFloat(posLookData, 0.0f);  // Yaw
+                        writeFloat(posLookData, 0.0f);  // Pitch
+                        posLookData.push_back(1);       // On Ground
+
+                        mc::protocol::Packet posLook(0x08, posLookData);
+                        auto posLookBytes = posLook.serialize();
+                        send(socketFd_, posLookBytes.data(), posLookBytes.size(), MSG_NOSIGNAL);
                     }
                     break;
                 }

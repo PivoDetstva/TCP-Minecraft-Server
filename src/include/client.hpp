@@ -32,6 +32,10 @@ namespace mc::network
 
         bool readBytes();
         bool tryReadPacket(mc::protocol::Packet &out);
+        void writeInt32(std::vector<uint8_t> &data, int32_t value);
+        void writeInt64(std::vector<uint8_t> &data, int64_t value);
+        void writeDouble(std::vector<uint8_t> &data, double value);
+        void writeFloat(std::vector<uint8_t> &data, float value);
     };
 
 }

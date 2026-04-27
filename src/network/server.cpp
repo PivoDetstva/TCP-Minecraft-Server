@@ -11,12 +11,13 @@ namespace mc::network
 
     void mc::network::Server::start()
     {
+
+        socketFd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (socketFd_ < 0)
         {
             std::cerr << "socket hasn't created\n";
             return;
         }
-        socketFd_ = socket(AF_INET, SOCK_STREAM, 0);
         int opt = 1;
         setsockopt(socketFd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
@@ -60,24 +61,6 @@ namespace mc::network
             std::cout << "Client connected\n";
             TcpClient client(clientFd);
             client.handle();
-            while (true)
-            {
-                std::vector<uint8_t> buffer(1024);
-                int bytes_received = read(clientFd, buffer.data(), buffer.size());
-                std::cout << bytes_received;
-
-                if (bytes_received <= 0)
-                {
-                    std::cout << "Client Disconnected";
-                    break;
-                }
-
-                std::string cmd(buffer.begin(), buffer.begin() + bytes_received); // how to make it into hex? minecraft protocol can cut it in output
-                std::cout << "DEBUG MSG: Received " << bytes_received << " bytes: [" << cmd << "]\n";
-                std::string response;
-
-                send(clientFd, response.data(), response.size(), MSG_NOSIGNAL);
-            }
             close(clientFd);
         }
         close(socketFd_);

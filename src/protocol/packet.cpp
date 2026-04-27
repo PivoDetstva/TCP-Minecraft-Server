@@ -31,11 +31,18 @@ namespace mc::protocol
         return {packetId, packetData};
     }
 
-    void writeInt32(std::vector<uint8_t> &data, int32_t value)
+    void writeLegacyString(std::vector<uint8_t> &data, const std::string &str)
     {
-        data.push_back((value >> 24) & 0xFF);
-        data.push_back((value >> 16) & 0xFF);
-        data.push_back((value >> 8) & 0xFF);
-        data.push_back((value >> 0) & 0xFF);
+        // write length as big endian short (2 bytes)
+        uint16_t len = static_cast<uint16_t>(str.size());
+        data.push_back((len >> 8) & 0xFF);
+        data.push_back(len & 0xFF);
+        // write each character as 2 bytes (UTF-16BE)
+        for (char c : str)
+        {
+            data.push_back(0x00);
+            data.push_back(static_cast<uint8_t>(c));
+        }
     }
+
 }

@@ -1,12 +1,12 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <span>
 #include <algorithm>
 
 namespace mc::protocol
 {
-
     struct Packet
     {
         int32_t id;
@@ -16,5 +16,5 @@ namespace mc::protocol
 
         [[nodiscard]] std::vector<uint8_t> serialize() const;
     };
-
+    void writeLegacyString(std::vector<uint8_t> &data, const std::string &str);
 }
