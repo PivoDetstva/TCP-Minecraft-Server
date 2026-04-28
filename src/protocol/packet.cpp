@@ -30,19 +30,4 @@ namespace mc::protocol
 
         return {packetId, packetData};
     }
-
-    void writeLegacyString(std::vector<uint8_t> &data, const std::string &str)
-    {
-        // write length as big endian short (2 bytes)
-        uint16_t len = static_cast<uint16_t>(str.size());
-        data.push_back((len >> 8) & 0xFF);
-        data.push_back(len & 0xFF);
-        // write each character as 2 bytes (UTF-16BE)
-        for (char c : str)
-        {
-            data.push_back(0x00);
-            data.push_back(static_cast<uint8_t>(c));
-        }
-    }
-
 }

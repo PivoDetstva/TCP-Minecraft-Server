@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(MinecraftServer)
 
-set(CMAKE_CXX_STANDARD 20)     
+set(CMAKE_CXX_STANDARD 23)     
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(MinecraftServer     
@@ -12,6 +12,7 @@ add_executable(MinecraftServer
     src/network/tcpclient.cpp
     src/protocol/packet.cpp
     src/protocol/varint.cpp
+    src/protocol/helper.cpp
 )
 
 target_include_directories(MinecraftServer PRIVATE
@@ -19,6 +20,9 @@ target_include_directories(MinecraftServer PRIVATE
      ${CMAKE_SOURCE_DIR}/src/protocol
      ${CMAKE_SOURCE_DIR}/src/network
 )
+
+target_link_libraries(MinecraftServer z)
+
 enable_testing()
 add_subdirectory(external/googletest)
 

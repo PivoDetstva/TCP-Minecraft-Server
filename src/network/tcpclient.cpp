@@ -11,38 +11,7 @@ namespace mc::network
             socketFd_ = -1;
         }
     }
-    void TcpClient::writeInt32(std::vector<uint8_t> &data, int32_t value)
 
-    {
-        data.push_back((value >> 24) & 0xFF);
-        data.push_back((value >> 16) & 0xFF);
-        data.push_back((value >> 8) & 0xFF);
-        data.push_back((value >> 0) & 0xFF);
-    }
-    void TcpClient::writeInt64(std::vector<uint8_t> &data, int64_t value)
-    {
-        data.push_back((value >> 56) & 0xFF);
-        data.push_back((value >> 48) & 0xFF);
-        data.push_back((value >> 40) & 0xFF);
-        data.push_back((value >> 32) & 0xFF);
-        data.push_back((value >> 24) & 0xFF);
-        data.push_back((value >> 16) & 0xFF);
-        data.push_back((value >> 8) & 0xFF);
-        data.push_back((value >> 0) & 0xFF);
-    }
-    void TcpClient::writeDouble(std::vector<uint8_t> &data, double value)
-    {
-        uint64_t bits;
-        std::memcpy(&bits, &value, sizeof(bits)); // reinterpret double bytes as uint64
-        writeInt64(data, static_cast<int64_t>(bits));
-    }
-
-    void TcpClient::writeFloat(std::vector<uint8_t> &data, float value)
-    {
-        uint32_t bits;
-        std::memcpy(&bits, &value, sizeof(bits)); // reinterpret float bytes as uint32
-        writeInt32(data, static_cast<int32_t>(bits));
-    }
     bool TcpClient::readBytes()
     {
         uint8_t temp[1024];
@@ -169,7 +138,7 @@ namespace mc::network
                         state = ConnectionState::Play;
 
                         std::vector<uint8_t> joinData;
-                        writeInt32(joinData, 1);
+                        mc::helper::writeInt32(joinData, 1);
 
                         joinData.push_back(0); // gamemode: survival
                         joinData.push_back(0); // dimension: overworld
@@ -192,41 +161,76 @@ namespace mc::network
 
                         std::vector<uint8_t> spawnData;
 
-                        writeInt32(spawnData, 0);  // X
-                        writeInt32(spawnData, 64); // Y
-                        writeInt32(spawnData, 0);  // Z
+                        mc::helper::writeInt32(spawnData, 0);  // X
+                        mc::helper::writeInt32(spawnData, 64); // Y
+                        mc::helper::writeInt32(spawnData, 0);  // Z
 
                         mc::protocol::Packet spawnPos(0x05, spawnData);
                         auto spawnBytes = spawnPos.serialize();
                         send(socketFd_, spawnBytes.data(), spawnBytes.size(), MSG_NOSIGNAL);
 
                         std::vector<uint8_t> posLookData;
-                        writeDouble(posLookData, 0.0);  // X
-                        writeDouble(posLookData, 64.0); // Y (высота ног)
-                        writeDouble(posLookData, 0.0);  // Z
-                        writeFloat(posLookData, 0.0f);  // Yaw
-                        writeFloat(posLookData, 0.0f);  // Pitch
-                        posLookData.push_back(1);       // On Ground
+                        mc::helper::writeDouble(posLookData, 0.0);  // X
+                        mc::helper::writeDouble(posLookData, 64.0); // Y
+                        mc::helper::writeDouble(posLookData, 0.0);  // Z
+                        mc::helper::writeFloat(posLookData, 0.0f);  // Yaw
+                        mc::helper::writeFloat(posLookData, 0.0f);  // Pitch
+                        posLookData.push_back(1);                   // On Ground
 
                         mc::protocol::Packet posLook(0x08, posLookData);
                         auto posLookBytes = posLook.serialize();
                         send(socketFd_, posLookBytes.data(), posLookBytes.size(), MSG_NOSIGNAL);
 
-                        // Отправляем самый первый Keep Alive, чтобы запустить цикл проверки связи
                         std::vector<uint8_t> initialKA;
-                        writeInt32(initialKA, 12345); // Любое число
+                        mc::helper::writeInt32(initialKA, 12345);
                         mc::protocol::Packet firstKA(0x00, initialKA);
                         auto kaBytes = firstKA.serialize();
                         send(socketFd_, kaBytes.data(), kaBytes.size(), MSG_NOSIGNAL);
                     }
                     break;
                 case ConnectionState::Play:
-                    if (packet.id == 0x00)
+                    switch (packet.id)
+                    {
+                    case 0x00:
                     {
                         // Keep Alive — send it straight back
                         mc::protocol::Packet keepAlive(0x00, packet.data);
                         auto kaBytes = keepAlive.serialize();
                         send(socketFd_, kaBytes.data(), kaBytes.size(), MSG_NOSIGNAL);
+                        break;
+                    }
+                    case 0x04:
+                    {
+                        size_t offset = 0;
+                        double x = mc::helper::readDouble(packet.data, offset);
+                        double y = mc::helper::readDouble(packet.data, offset);
+                        double z = mc::helper::readDouble(packet.data, offset);
+                        double stance = mc::helper::readDouble(packet.data, offset);
+                        bool onGround = mc::helper::readBoolean(packet.data, offset);
+                        std::cout << "4.Player moved to: " << x << " " << y << " " << z << "\n";
+                    }
+                    case 0x06:
+                    {
+                        size_t offset = 0;
+                        double x = mc::helper::readDouble(packet.data, offset);
+                        double y = mc::helper::readDouble(packet.data, offset);
+                        double z = mc::helper::readDouble(packet.data, offset);
+                        double stance = mc::helper::readDouble(packet.data, offset);
+                        float yaw = mc::helper::readFloat(packet.data, offset);
+                        float pitch = mc::helper::readFloat(packet.data, offset);
+                        bool onGround = mc::helper::readBoolean(packet.data, offset);
+
+                        std::cout << "6.Player looked and moved to: " << x << " " << y << " " << z << "\n";
+                        break;
+                    }
+                    default:
+                    {
+                        std::cout << "Unknown packet in Play state: ID " << (int)packet.id << "\n";
+                        // all packets to deal with later.
+                        // 3 - just staying
+                        // 5 - mouse actions.
+                        break;
+                    }
                     }
                     break;
                 }
