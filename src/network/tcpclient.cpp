@@ -211,6 +211,22 @@ namespace mc::network
                         mc::protocol::Packet posLook(0x08, posLookData);
                         auto posLookBytes = posLook.serialize();
                         send(socketFd_, posLookBytes.data(), posLookBytes.size(), MSG_NOSIGNAL);
+
+                        // Отправляем самый первый Keep Alive, чтобы запустить цикл проверки связи
+                        std::vector<uint8_t> initialKA;
+                        writeInt32(initialKA, 12345); // Любое число
+                        mc::protocol::Packet firstKA(0x00, initialKA);
+                        auto kaBytes = firstKA.serialize();
+                        send(socketFd_, kaBytes.data(), kaBytes.size(), MSG_NOSIGNAL);
+                    }
+                    break;
+                case ConnectionState::Play:
+                    if (packet.id == 0x00)
+                    {
+                        // Keep Alive — send it straight back
+                        mc::protocol::Packet keepAlive(0x00, packet.data);
+                        auto kaBytes = keepAlive.serialize();
+                        send(socketFd_, kaBytes.data(), kaBytes.size(), MSG_NOSIGNAL);
                     }
                     break;
                 }
