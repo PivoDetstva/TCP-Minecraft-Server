@@ -2,6 +2,11 @@
 
 namespace mc::helper
 {
+    void writeInt16(std::vector<uint8_t> &data, int16_t value)
+    {
+        data.push_back((value >> 8) & 0xFF);
+        data.push_back((value >> 0) & 0xFF);
+    }
     void writeInt32(std::vector<uint8_t> &data, int32_t value)
 
     {
@@ -51,7 +56,7 @@ namespace mc::helper
     {
         std::array<uint8_t, 8> arr;
         std::copy_n(data.data() + offset, 8, arr.begin());
-
+        offset += 8;
         uint64_t val = std::bit_cast<uint64_t>(arr);
         if constexpr (std::endian::native == std::endian::little)
         {
@@ -64,7 +69,7 @@ namespace mc::helper
     {
         std::array<uint8_t, 4> arr;
         std::copy_n(data.data() + offset, 4, arr.begin());
-
+        offset += 4;
         uint32_t val = std::bit_cast<uint32_t>(arr);
         if constexpr (std::endian::native == std::endian::little)
         {
@@ -88,5 +93,49 @@ namespace mc::helper
     bool readBoolean(const std::vector<uint8_t> &data, size_t &offset)
     {
         return data[offset++] != 0;
+    }
+    int32_t readVarInt(const std::vector<uint8_t> &data, size_t &offset)
+    {
+        int32_t value = 0;
+        int32_t position = 0;
+        uint8_t currentByte;
+
+        while (true)
+        {
+            if (offset >= data.size())
+            {
+                throw std::runtime_error("VarInt reading out of bounds");
+            }
+
+            currentByte = data[offset++];
+
+            value |= static_cast<int32_t>(currentByte & 0x7F) << position;
+
+            if ((currentByte & 0x80) == 0)
+                break;
+
+            position += 7;
+
+            if (position >= 32)
+            {
+                throw std::runtime_error("VarInt is too big");
+            }
+        }
+
+        return value;
+    }
+    std::string readString(const std::vector<uint8_t> &data, size_t &offset)
+    {
+        int32_t length = readVarInt(data, offset);
+
+        if (offset + length > data.size())
+        {
+            throw std::runtime_error("String length exceeds packet size");
+        }
+
+        std::string str(reinterpret_cast<const char *>(data.data() + offset), length);
+
+        offset += length;
+        return str;
     }
 }

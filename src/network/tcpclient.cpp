@@ -23,13 +23,6 @@ namespace mc::network
         }
         buffer_.insert(buffer_.end(), temp, temp + received);
 
-        std::cout << "Raw bytes: ";
-        for (auto b : buffer_)
-        {
-            std::cout << std::hex << (int)b << " ";
-        }
-        std::cout << std::dec << "\n";
-
         return true;
     }
 
@@ -54,6 +47,24 @@ namespace mc::network
 
         return true;
     }
+    void TcpClient::sendChunk(int chunkX, int chunkZ)
+    {
+        Chunk *chunk = world_.getChunk(chunkX, chunkZ);
+        auto compressed = chunk->serialize();
+
+        std::vector<uint8_t> data;
+        mc::helper::writeInt32(data, chunkX);            // chunk X
+        mc::helper::writeInt32(data, chunkZ);            // chunk Z
+        data.push_back(1);                               // ground up continuous
+        mc::helper::writeInt16(data, 0xFFFF);            // primary bitmap
+        mc::helper::writeInt16(data, 0x0000);            // add bitmap
+        mc::helper::writeInt32(data, compressed.size()); // compressed size
+        data.insert(data.end(), compressed.begin(), compressed.end());
+
+        mc::protocol::Packet chunkPacket(0x21, data);
+        auto bytes = chunkPacket.serialize();
+        send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+    }
     void TcpClient::handle()
     {
         ConnectionState state = ConnectionState::Handshaking;
@@ -68,8 +79,6 @@ namespace mc::network
             mc::protocol::Packet packet;
             while (tryReadPacket(packet))
             {
-                std::cout << "Received packet ID: " << packet.id << "\n";
-
                 switch (state)
                 {
                 case ConnectionState::Handshaking:
@@ -125,15 +134,8 @@ namespace mc::network
                         data.insert(data.end(), username.begin(), username.end());
                         mc::protocol::Packet loginSuccess(0x02, data);
                         auto bytes = loginSuccess.serialize();
-                        std::cout << "LoginSuccess bytes: ";
-                        for (auto b : bytes)
-                        {
-                            std::cout << std::hex << (int)b << " ";
-                        }
-                        std::cout << std::dec << "\n";
 
                         send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
-                        usleep(100000);
 
                         state = ConnectionState::Play;
 
@@ -181,6 +183,14 @@ namespace mc::network
                         auto posLookBytes = posLook.serialize();
                         send(socketFd_, posLookBytes.data(), posLookBytes.size(), MSG_NOSIGNAL);
 
+                        for (int x = -3; x <= 3; x++)
+                        {
+                            for (int z = -3; z <= 3; z++)
+                            {
+                                sendChunk(x, z);
+                            }
+                        }
+
                         std::vector<uint8_t> initialKA;
                         mc::helper::writeInt32(initialKA, 12345);
                         mc::protocol::Packet firstKA(0x00, initialKA);
@@ -199,36 +209,58 @@ namespace mc::network
                         send(socketFd_, kaBytes.data(), kaBytes.size(), MSG_NOSIGNAL);
                         break;
                     }
+                    case 0x01:
+                    {
+                        // chat receive packet
+                        size_t offset = 0;
+                        std::string msg = mc::helper::readString(packet.data, offset);
+                        std::cout << "[Chat] " << msg << std::endl;
+                        break;
+                    }
+                    case 0x03:
+                    {
+                        // player standing on the groung, that's it.
+                        size_t offset = 0;
+                        bool onGround = mc::helper::readBoolean(packet.data, offset);
+                        break;
+                    }
                     case 0x04:
                     {
+                        // movement.
                         size_t offset = 0;
                         double x = mc::helper::readDouble(packet.data, offset);
                         double y = mc::helper::readDouble(packet.data, offset);
-                        double z = mc::helper::readDouble(packet.data, offset);
                         double stance = mc::helper::readDouble(packet.data, offset);
+                        double z = mc::helper::readDouble(packet.data, offset);
+
                         bool onGround = mc::helper::readBoolean(packet.data, offset);
                         std::cout << "4.Player moved to: " << x << " " << y << " " << z << "\n";
+                        break;
                     }
                     case 0x06:
                     {
+                        // movement and looking position
                         size_t offset = 0;
                         double x = mc::helper::readDouble(packet.data, offset);
                         double y = mc::helper::readDouble(packet.data, offset);
-                        double z = mc::helper::readDouble(packet.data, offset);
                         double stance = mc::helper::readDouble(packet.data, offset);
+                        double z = mc::helper::readDouble(packet.data, offset);
                         float yaw = mc::helper::readFloat(packet.data, offset);
                         float pitch = mc::helper::readFloat(packet.data, offset);
                         bool onGround = mc::helper::readBoolean(packet.data, offset);
 
-                        std::cout << "6.Player looked and moved to: " << x << " " << y << " " << z << "\n";
+                        std::cout << "6.Player moved to: " << x << " " << y << " " << z << "\n";
+                        std::cout << "Player looked: " << yaw << " " << pitch << "\n";
                         break;
                     }
                     default:
                     {
                         std::cout << "Unknown packet in Play state: ID " << (int)packet.id << "\n";
                         // all packets to deal with later.
-                        // 3 - just staying
                         // 5 - mouse actions.
+                        // 11 animation packet.
+                        // 13 player abilities
+                        // 22 client settings
                         break;
                     }
                     }
