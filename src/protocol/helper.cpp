@@ -94,48 +94,57 @@ namespace mc::helper
     {
         return data[offset++] != 0;
     }
-    int32_t readVarInt(const std::vector<uint8_t> &data, size_t &offset)
+    [[nodiscard]] std::expected<int32_t, std::string_view> readVarInt(std::span<const uint8_t> data, size_t &offset)
     {
         int32_t value = 0;
         int32_t position = 0;
-        uint8_t currentByte;
 
         while (true)
         {
             if (offset >= data.size())
-            {
-                throw std::runtime_error("VarInt reading out of bounds");
-            }
+                return std::unexpected("Buffer overflow");
 
-            currentByte = data[offset++];
-
+            uint8_t currentByte = data[offset++];
             value |= static_cast<int32_t>(currentByte & 0x7F) << position;
 
             if ((currentByte & 0x80) == 0)
                 break;
 
             position += 7;
-
             if (position >= 32)
-            {
-                throw std::runtime_error("VarInt is too big");
-            }
+                return std::unexpected("VarInt too big");
         }
-
         return value;
     }
-    std::string readString(const std::vector<uint8_t> &data, size_t &offset)
+    [[nodiscard]] std::expected<std::string, std::string_view> readString(std::span<const uint8_t> data, size_t &offset)
     {
-        int32_t length = readVarInt(data, offset);
+        auto lengthRes = readVarInt(data, offset);
+        if (!lengthRes)
+            return std::unexpected(lengthRes.error());
 
+        int32_t length = *lengthRes;
         if (offset + length > data.size())
-        {
-            throw std::runtime_error("String length exceeds packet size");
-        }
+            return std::unexpected("String out of bounds");
 
         std::string str(reinterpret_cast<const char *>(data.data() + offset), length);
-
         offset += length;
+
         return str;
+    }
+    void writeVarInt(std::vector<uint8_t> &buffer, int32_t value)
+    {
+        uint32_t uValue = static_cast<uint32_t>(value);
+        while (uValue >= 0x80)
+        {
+            buffer.push_back(static_cast<uint8_t>(uValue | 0x80));
+            uValue >>= 7;
+        }
+        buffer.push_back(static_cast<uint8_t>(uValue));
+    }
+
+    void writeString(std::vector<uint8_t> &buffer, std::string_view str)
+    {
+        writeVarInt(buffer, static_cast<int32_t>(str.size()));
+        buffer.insert(buffer.end(), str.begin(), str.end());
     }
 }

@@ -1,7 +1,10 @@
 #include "client.hpp"
 namespace mc::network
 {
-    mc::network::TcpClient::TcpClient(int socketFd) : socketFd_(socketFd) {}
+    TcpClient::TcpClient(int socketFd)
+        : socketFd_(socketFd), playerX_(0.0), playerY_(64.0), playerZ_(0.0), lastChunkX_(0), lastChunkZ_(0)
+    {
+    }
 
     TcpClient::~TcpClient()
     {
@@ -64,6 +67,17 @@ namespace mc::network
         mc::protocol::Packet chunkPacket(0x21, data);
         auto bytes = chunkPacket.serialize();
         send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+    }
+    void TcpClient::sendChunksAround(int chunkX, int chunkZ)
+    {
+        for (int x = chunkX - 3; x <= chunkX + 3; x++)
+        {
+            for (int z = chunkZ - 3; z <= chunkZ + 3; z++)
+            {
+                std::cout << "send chunk triggered\n";
+                sendChunk(x, z);
+            }
+        }
     }
     void TcpClient::handle()
     {
@@ -213,8 +227,23 @@ namespace mc::network
                     {
                         // chat receive packet
                         size_t offset = 0;
-                        std::string msg = mc::helper::readString(packet.data, offset);
-                        std::cout << "[Chat] " << msg << std::endl;
+                        auto msg = mc::helper::readString(packet.data, offset);
+                        if (msg.has_value())
+                        {
+                            std::cout << "[Chat] " << *msg << std::endl;
+
+                            std::string jsonReply = "{\"text\": \"Server: I heard you!\"}";
+                            std::vector<uint8_t> replyData;
+                            mc::helper::writeString(replyData, jsonReply);
+
+                            mc::protocol::Packet chatPacket(0x02, replyData);
+                            auto bytes = chatPacket.serialize();
+                            send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+                        }
+                        else
+                        {
+                            std::cerr << "[Protocol Error] Failed to read chat: " << msg.error() << std::endl;
+                        }
                         break;
                     }
                     case 0x03:
@@ -232,8 +261,20 @@ namespace mc::network
                         double y = mc::helper::readDouble(packet.data, offset);
                         double stance = mc::helper::readDouble(packet.data, offset);
                         double z = mc::helper::readDouble(packet.data, offset);
-
                         bool onGround = mc::helper::readBoolean(packet.data, offset);
+                        int currentChunkX = (int)floor(x) >> 4;
+                        int currentChunkZ = (int)floor(z) >> 4;
+
+                        if (currentChunkX != lastChunkX_ || currentChunkZ != lastChunkZ_)
+                        {
+                            lastChunkX_ = currentChunkX;
+                            lastChunkZ_ = currentChunkZ;
+
+                            sendChunksAround(currentChunkX, currentChunkZ);
+                        }
+                        playerX_ = x;
+                        playerY_ = y;
+                        playerZ_ = z;
                         std::cout << "4.Player moved to: " << x << " " << y << " " << z << "\n";
                         break;
                     }
@@ -248,7 +289,19 @@ namespace mc::network
                         float yaw = mc::helper::readFloat(packet.data, offset);
                         float pitch = mc::helper::readFloat(packet.data, offset);
                         bool onGround = mc::helper::readBoolean(packet.data, offset);
+                        int currentChunkX = (int)floor(x) >> 4;
+                        int currentChunkZ = (int)floor(z) >> 4;
 
+                        if (currentChunkX != lastChunkX_ || currentChunkZ != lastChunkZ_)
+                        {
+                            lastChunkX_ = currentChunkX;
+                            lastChunkZ_ = currentChunkZ;
+
+                            sendChunksAround(currentChunkX, currentChunkZ);
+                        }
+                        playerX_ = x;
+                        playerY_ = y;
+                        playerZ_ = z;
                         std::cout << "6.Player moved to: " << x << " " << y << " " << z << "\n";
                         std::cout << "Player looked: " << yaw << " " << pitch << "\n";
                         break;

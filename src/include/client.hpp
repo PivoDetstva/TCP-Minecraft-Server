@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <bit>
+#include <cmath>
+#include <expected>
 #include "packet.hpp"
 #include "varint.hpp"
 #include "world.hpp"
@@ -32,10 +34,13 @@ namespace mc::network
         int socketFd_;
         std::vector<uint8_t> buffer_;
         World world_;
+        double playerX_, playerY_, playerZ_;
+        int lastChunkX_, lastChunkZ_;
 
         bool readBytes();
         bool tryReadPacket(mc::protocol::Packet &out);
         void sendChunk(int chunkX, int chunkZ);
+        void sendChunksAround(int chunkX, int chunkZ);
     };
 
 }
@@ -52,6 +57,8 @@ namespace mc::helper
     bool readBoolean(const std::vector<uint8_t> &data, size_t &offset);
     uint64_t readUint64(const std::vector<uint8_t> &data, size_t &offset);
     uint32_t readUint32(const std::vector<uint8_t> &data, size_t &offset);
-    int32_t readVarInt(const std::vector<uint8_t> &data, size_t &offset);
-    std::string readString(const std::vector<uint8_t> &data, size_t &offset);
+    [[nodiscard]] std::expected<int32_t, std::string_view> readVarInt(std::span<const uint8_t> data, size_t &offset);
+    [[nodiscard]] std::expected<std::string, std::string_view> readString(std::span<const uint8_t> data, size_t &offset);
+    void writeVarInt(std::vector<uint8_t> &buffer, int32_t value);
+    void writeString(std::vector<uint8_t> &buffer, std::string_view str);
 }

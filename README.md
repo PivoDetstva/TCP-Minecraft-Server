@@ -7,7 +7,9 @@ Later to be done to accept forge packets.
 
 The server works on the modern C++ 20 and C++23 features like std::span, std::bit_cast and std::byteswap with std::endian.
 
-##Works specifically on Linux. 
+## Works specifically on Linux. 
 Such headers as <sys/socket.h> is a linux especiality. This code can't be executed on Windows or another system, except if Docker container used, can be added later. 
 
 The basic purpose of the server is to run it on another device, except the machine that will run Minecraft. Reason: more optimization and less resources spent. 
+
+*Basically it will require using a virtual ip or creating a network with friends using Radmin or any other service, unless your IPS is not blocking a port forwarding. 
