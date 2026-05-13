@@ -11,6 +11,8 @@
 #include "packet.hpp"
 #include "varint.hpp"
 #include "world.hpp"
+#include "player.hpp"
+#include <memory>
 
 namespace mc::network
 {
@@ -34,6 +36,7 @@ namespace mc::network
         int socketFd_;
         std::vector<uint8_t> buffer_;
         World world_;
+        std::unique_ptr<mc::logic::Player> player_;
         double playerX_, playerY_, playerZ_;
         int lastChunkX_, lastChunkZ_;
 
@@ -41,6 +44,8 @@ namespace mc::network
         bool tryReadPacket(mc::protocol::Packet &out);
         void sendChunk(int chunkX, int chunkZ);
         void sendChunksAround(int chunkX, int chunkZ);
+        void sendTabListEntry(std::string_view name, bool online, int16_t ping);
+        void sendFullInventory();
     };
 
 }
@@ -57,6 +62,8 @@ namespace mc::helper
     bool readBoolean(const std::vector<uint8_t> &data, size_t &offset);
     uint64_t readUint64(const std::vector<uint8_t> &data, size_t &offset);
     uint32_t readUint32(const std::vector<uint8_t> &data, size_t &offset);
+    uint16_t readShort(const std::vector<uint8_t> &data, size_t &offset);
+    uint8_t readByte(const std::vector<uint8_t> &data, size_t &offset);
     [[nodiscard]] std::expected<int32_t, std::string_view> readVarInt(std::span<const uint8_t> data, size_t &offset);
     [[nodiscard]] std::expected<std::string, std::string_view> readString(std::span<const uint8_t> data, size_t &offset);
     void writeVarInt(std::vector<uint8_t> &buffer, int32_t value);

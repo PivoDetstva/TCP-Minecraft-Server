@@ -79,6 +79,53 @@ namespace mc::network
             }
         }
     }
+    void TcpClient::sendTabListEntry(std::string_view name, bool online, int16_t ping)
+    {
+        std::vector<uint8_t> data;
+        mc::helper::writeString(data, name);
+        data.push_back(online ? 1 : 0);
+
+        uint16_t netPing = htons(ping);
+        uint8_t *pingBytes = reinterpret_cast<uint8_t *>(&netPing);
+        data.push_back(pingBytes[0]);
+        data.push_back(pingBytes[1]);
+
+        mc::protocol::Packet tabPacket(0x38, data);
+        auto bytes = tabPacket.serialize();
+        send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+    }
+    void TcpClient::sendFullInventory()
+    {
+        std::vector<uint8_t> data;
+        data.push_back(0); // Window ID 0 (Inventory)
+
+        uint16_t count = 45;
+        data.push_back((count >> 8) & 0xFF);
+        data.push_back(count & 0xFF);
+
+        for (int i = 0; i < 45; ++i)
+        {
+            if (i == 36) // this logic kinda sucks, need to change
+            {
+                data.push_back(0x01);
+                data.push_back(0x08); // ID
+                data.push_back(64);   // Count
+                data.push_back(0x00);
+                data.push_back(0x00); // Damage
+                data.push_back(0xFF);
+                data.push_back(0xFF); // NBT length -1
+            }
+            else
+            {
+                data.push_back(0xFF);
+                data.push_back(0xFF);
+            }
+        }
+
+        mc::protocol::Packet invPacket(0x30, data);
+        auto bytes = invPacket.serialize();
+        send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
+    }
     void TcpClient::handle()
     {
         ConnectionState state = ConnectionState::Handshaking;
@@ -135,6 +182,9 @@ namespace mc::network
                             packet.data.begin() + lengthResult.bytesRead + lengthResult.value);
                         std::cout << "Player joining: " << username << "\n";
 
+                        player_ = std::make_unique<mc::logic::Player>(username);
+                        std::cout << "Created player object for: " << player_->username << "\n";
+
                         std::vector<uint8_t> data;
                         // UUID with dashes — VarInt string
                         std::string uuid = "00000000-0000-0000-0000-000000000000";
@@ -175,6 +225,8 @@ namespace mc::network
                         std::cout << std::dec << "\n";
                         send(socketFd_, joinBytes.data(), joinBytes.size(), MSG_NOSIGNAL);
 
+                        sendTabListEntry(player_->username, 1, 50);
+
                         std::vector<uint8_t> spawnData;
 
                         mc::helper::writeInt32(spawnData, 0);  // X
@@ -196,6 +248,8 @@ namespace mc::network
                         mc::protocol::Packet posLook(0x08, posLookData);
                         auto posLookBytes = posLook.serialize();
                         send(socketFd_, posLookBytes.data(), posLookBytes.size(), MSG_NOSIGNAL);
+
+                        sendFullInventory();
 
                         for (int x = -3; x <= 3; x++)
                         {
@@ -230,9 +284,14 @@ namespace mc::network
                         auto msg = mc::helper::readString(packet.data, offset);
                         if (msg.has_value())
                         {
-                            std::cout << "[Chat] " << *msg << std::endl;
-
-                            std::string jsonReply = "{\"text\": \"Server: I heard you!\"}";
+                            std::string jsonReply = R"({"text": "<", "color": "gray", "extra": [)"
+                                                    R"({"text": ")" +
+                                                    player_->username +
+                                                    R"(", "color": "gold"}, )"
+                                                    R"({"text": "> ", "color": "gray"}, )"
+                                                    R"({"text": ")" +
+                                                    *msg +
+                                                    R"(", "color": "white"}]})";
                             std::vector<uint8_t> replyData;
                             mc::helper::writeString(replyData, jsonReply);
 

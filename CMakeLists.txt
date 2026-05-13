@@ -13,12 +13,15 @@ add_executable(MinecraftServer
     src/protocol/packet.cpp
     src/protocol/varint.cpp
     src/protocol/helper.cpp
+    src/world/RegionFile.cpp
+    src/world/NBT.cpp
 )
 
 target_include_directories(MinecraftServer PRIVATE
     ${CMAKE_SOURCE_DIR}/src/include   
      ${CMAKE_SOURCE_DIR}/src/protocol
      ${CMAKE_SOURCE_DIR}/src/network
+     ${CMAKE_SOURCE_DIR}/src/world
 )
 
 target_link_libraries(MinecraftServer z)

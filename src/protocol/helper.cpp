@@ -78,6 +78,30 @@ namespace mc::helper
         return val;
     }
 
+    uint16_t readShort(const std::vector<uint8_t> &data, size_t &offset)
+    {
+        std::array<uint8_t, 2> arr;
+        std::copy_n(data.data() + offset, 2, arr.begin());
+        offset += 2;
+        uint16_t val = std::bit_cast<uint16_t>(arr);
+        if constexpr (std::endian::native == std::endian::little)
+        {
+            return std::byteswap(val);
+        }
+        return val;
+    }
+    uint8_t readByte(const std::vector<uint8_t> &data, size_t &offset)
+    {
+        std::array<uint8_t, 1> arr;
+        std::copy_n(data.data() + offset, 1, arr.begin());
+        offset += 1;
+        uint8_t val = std::bit_cast<uint8_t>(arr);
+        if constexpr (std::endian::native == std::endian::little)
+        {
+            return std::byteswap(val);
+        }
+        return val;
+    }
     double readDouble(const std::vector<uint8_t> &data, size_t &offset)
     {
         uint64_t val = readUint64(data, offset);
