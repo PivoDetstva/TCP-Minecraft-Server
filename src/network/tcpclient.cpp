@@ -1,7 +1,7 @@
 #include "client.hpp"
 namespace mc::network
 {
-    TcpClient::TcpClient(int socketFd)
+    TcpClient::TcpClient(int socketFd, World &world)
         : socketFd_(socketFd), playerX_(0.0), playerY_(64.0), playerZ_(0.0), lastChunkX_(0), lastChunkZ_(0)
     {
     }
@@ -52,7 +52,8 @@ namespace mc::network
     }
     void TcpClient::sendChunk(int chunkX, int chunkZ)
     {
-        Chunk *chunk = world_.getChunk(chunkX, chunkZ);
+        Chunk loaded = mc::world::loadChunk(chunkX, chunkZ);
+        Chunk *chunk = &loaded;
         auto compressed = chunk->serialize();
 
         std::vector<uint8_t> data;

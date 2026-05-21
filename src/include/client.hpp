@@ -13,6 +13,7 @@
 #include "world.hpp"
 #include "player.hpp"
 #include <memory>
+#include "WorldSave.hpp"
 
 namespace mc::network
 {
@@ -27,7 +28,7 @@ namespace mc::network
     class TcpClient
     {
     public:
-        explicit TcpClient(int socketFd);
+        explicit TcpClient(int socketFd, World &world);
         ~TcpClient();
 
         void handle();
@@ -35,7 +36,6 @@ namespace mc::network
     private:
         int socketFd_;
         std::vector<uint8_t> buffer_;
-        World world_;
         std::unique_ptr<mc::logic::Player> player_;
         double playerX_, playerY_, playerZ_;
         int lastChunkX_, lastChunkZ_;

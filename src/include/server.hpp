@@ -7,6 +7,8 @@
 #include <cstring>
 #include <unistd.h>
 #include "client.hpp"
+#include "world.hpp"
+#include <thread>
 namespace mc::network
 {
     class Server
@@ -14,6 +16,7 @@ namespace mc::network
     private:
         uint16_t port_;
         int socketFd_;
+        World world_;
 
     public:
         Server() = default;

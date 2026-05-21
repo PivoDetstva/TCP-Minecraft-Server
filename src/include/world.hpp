@@ -4,6 +4,7 @@
 #include <map>
 #include <zlib.h>
 #include <utility>
+#include <atomic>
 class Chunk
 {
 public:

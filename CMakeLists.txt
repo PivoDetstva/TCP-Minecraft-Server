@@ -15,6 +15,7 @@ add_executable(MinecraftServer
     src/protocol/helper.cpp
     src/world/RegionFile.cpp
     src/world/NBT.cpp
+    src/world/WorldSave.cpp
 )
 
 target_include_directories(MinecraftServer PRIVATE

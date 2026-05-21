@@ -59,7 +59,7 @@ namespace mc::network
             }
 
             std::cout << "Client connected\n";
-            TcpClient client(clientFd);
+            TcpClient client(clientFd, world_);
             client.handle();
             close(clientFd);
         }

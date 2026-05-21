@@ -5,6 +5,7 @@
 #include <map>
 #include <variant>
 #include "client.hpp"
+
 enum class TagType : uint8_t
 {
     End = 0,
@@ -20,6 +21,7 @@ enum class TagType : uint8_t
     Compound = 10,
     IntArray = 11
 };
+
 namespace mc::world
 {
     struct NBTTag
@@ -27,7 +29,6 @@ namespace mc::world
         TagType type;
         std::string name;
 
-        // the value — could be any of the tag types
         std::variant<
             int8_t,                        // Byte
             int16_t,                       // Short
@@ -43,5 +44,34 @@ namespace mc::world
             >
             value;
     };
+
+    // Reading: parse a full NBT tag (type + name + payload) from raw bytes.
     NBTTag readTag(const std::vector<uint8_t> &data, size_t &offset);
-}
+    // Writing: serialise a tag back to bytes.
+    void writeTag(std::vector<uint8_t> &out, const NBTTag &tag, bool writeHeader = true);
+
+    NBTTag makeCompound(const std::string &name, std::map<std::string, NBTTag> children);
+    NBTTag makeList(const std::string &name, TagType elementType, std::vector<NBTTag> items);
+    NBTTag makeByteArray(const std::string &name, std::vector<int8_t> bytes);
+    NBTTag makeIntArray(const std::string &name, std::vector<int32_t> ints);
+    NBTTag makeByte(const std::string &name, int8_t value);
+    NBTTag makeShort(const std::string &name, int16_t value);
+    NBTTag makeInt(const std::string &name, int32_t value);
+    NBTTag makeLong(const std::string &name, int64_t value);
+    NBTTag makeString(const std::string &name, const std::string &value);
+
+    // -----------------------------------------------------------------------
+    // Chunk NBT helpers.
+    //
+    // buildChunkNBT():
+    //   Given a Chunk (from world.hpp), produce the NBT tree that Minecraft
+    //   1.7.10 (Anvil format) expects when it loads a chunk.
+    //
+    // parseChunkNBT():
+    //   The inverse: given the root NBT tag read from a .mca file, fill a
+    //   Chunk object so the server can use it.
+    // -----------------------------------------------------------------------
+    std::vector<uint8_t> buildChunkNBT(int chunkX, int chunkZ, const Chunk &chunk);
+    void parseChunkNBT(const NBTTag &root, Chunk &chunk);
+
+} // namespace mc::world
