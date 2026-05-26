@@ -23,6 +23,10 @@ The basic purpose of the server is to run it on another device, except the machi
 - VarInt encoding/decoding per Minecraft protocol spec
 - zlib chunk compression
 - Big-endian binary serialization with C++23 std::byteswap
+- Chunk persistence via Anvil region file format (.mca)
+- Block breaking and placement
+- World saves on server shutdown via "stop" console command
+- Player inventory display
 
 ## Technical Highlights
 
@@ -32,9 +36,11 @@ The basic purpose of the server is to run it on another device, except the machi
 - Compile-time endianness detection with std::endian
 - Clean namespace hierarchy: mc::network, mc::protocol, mc::helper
 - Uses std::span, std::bit_cast, std::byteswap (C++20/23)
+- NBT binary format implementation (read/write) for chunk serialization
+- Anvil region file format (.mca) with zlib sector compression
 
 ## Limitations (In Progress)
 
-- Single-threaded: handles one client at a time
+- Single-threaded: handles one client at a time(not anymore for server, but still only one client)
 - World is flat dirt (no terrain generation yet)
-- No persistence: world resets on restart
+- No persistence: world resets on restart(it does have saving logic, but haven't tested it properly yet)
