@@ -45,9 +45,7 @@ namespace mc::world
             value;
     };
 
-    // Reading: parse a full NBT tag (type + name + payload) from raw bytes.
     NBTTag readTag(const std::vector<uint8_t> &data, size_t &offset);
-    // Writing: serialise a tag back to bytes.
     void writeTag(std::vector<uint8_t> &out, const NBTTag &tag, bool writeHeader = true);
 
     NBTTag makeCompound(const std::string &name, std::map<std::string, NBTTag> children);
@@ -60,18 +58,7 @@ namespace mc::world
     NBTTag makeLong(const std::string &name, int64_t value);
     NBTTag makeString(const std::string &name, const std::string &value);
 
-    // -----------------------------------------------------------------------
-    // Chunk NBT helpers.
-    //
-    // buildChunkNBT():
-    //   Given a Chunk (from world.hpp), produce the NBT tree that Minecraft
-    //   1.7.10 (Anvil format) expects when it loads a chunk.
-    //
-    // parseChunkNBT():
-    //   The inverse: given the root NBT tag read from a .mca file, fill a
-    //   Chunk object so the server can use it.
-    // -----------------------------------------------------------------------
     std::vector<uint8_t> buildChunkNBT(int chunkX, int chunkZ, const Chunk &chunk);
     void parseChunkNBT(const NBTTag &root, Chunk &chunk);
 
-} // namespace mc::world
+}

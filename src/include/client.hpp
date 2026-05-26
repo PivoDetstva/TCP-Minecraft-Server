@@ -39,6 +39,7 @@ namespace mc::network
         std::unique_ptr<mc::logic::Player> player_;
         double playerX_, playerY_, playerZ_;
         int lastChunkX_, lastChunkZ_;
+        World &world_;
 
         bool readBytes();
         bool tryReadPacket(mc::protocol::Packet &out);
@@ -51,6 +52,7 @@ namespace mc::network
 }
 namespace mc::helper
 {
+    void writeInt8(std::vector<uint8_t> &data, int8_t value);
     void writeInt16(std::vector<uint8_t> &data, int16_t value);
     void writeInt32(std::vector<uint8_t> &data, int32_t value);
     void writeInt64(std::vector<uint8_t> &data, int64_t value);
@@ -68,4 +70,6 @@ namespace mc::helper
     [[nodiscard]] std::expected<std::string, std::string_view> readString(std::span<const uint8_t> data, size_t &offset);
     void writeVarInt(std::vector<uint8_t> &buffer, int32_t value);
     void writeString(std::vector<uint8_t> &buffer, std::string_view str);
+    void writeSlot(std::vector<uint8_t> &buffer, const mc::logic::Slot &slot);
+    int32_t readInt32(const std::vector<uint8_t> &data, size_t &offset);
 }

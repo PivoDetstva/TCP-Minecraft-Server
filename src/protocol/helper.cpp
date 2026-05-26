@@ -2,6 +2,10 @@
 
 namespace mc::helper
 {
+    void writeInt8(std::vector<uint8_t> &data, int8_t value)
+    {
+        data.push_back(static_cast<uint8_t>(value));
+    }
     void writeInt16(std::vector<uint8_t> &data, int16_t value)
     {
         data.push_back((value >> 8) & 0xFF);
@@ -170,5 +174,20 @@ namespace mc::helper
     {
         writeVarInt(buffer, static_cast<int32_t>(str.size()));
         buffer.insert(buffer.end(), str.begin(), str.end());
+    }
+    void writeSlot(std::vector<uint8_t> &buffer, const mc::logic::Slot &slot)
+    {
+        writeInt16(buffer, slot.id);
+
+        if (slot.id != -1)
+        {
+            writeInt8(buffer, slot.count);
+            writeInt16(buffer, slot.damage);
+            writeInt16(buffer, -1);
+        }
+    }
+    int32_t readInt32(const std::vector<uint8_t> &data, size_t &offset)
+    {
+        return static_cast<int32_t>(readUint32(data, offset));
     }
 }

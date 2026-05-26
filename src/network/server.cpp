@@ -49,7 +49,10 @@ namespace mc::network
 
         std::cout << "Waiting for connection..." << std::endl;
 
-        while (true)
+        running_ = true;
+        consoleThread_ = std::thread(&Server::consoleLoop, this);
+        consoleThread_.detach();
+        while (running_)
         {
             int clientFd = accept(socketFd_, nullptr, nullptr);
             if (clientFd < 0)
@@ -70,9 +73,29 @@ namespace mc::network
     {
         if (socketFd_ >= 0)
         {
+            world_.saveAllChunks();
+            shutdown(socketFd_, SHUT_RDWR);
             close(socketFd_);
             socketFd_ = -1;
         }
     }
-
+    void Server::consoleLoop()
+    {
+        std::string command;
+        while (running_)
+        {
+            std::getline(std::cin, command);
+            if (command == "stop")
+            {
+                running_ = false;
+                stop();
+                std::cout << "server stopped\n";
+            }
+            else
+            {
+                std::cout << "Unknown command, thy again\n";
+                continue;
+            }
+        }
+    }
 }

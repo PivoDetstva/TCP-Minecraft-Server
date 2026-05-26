@@ -21,6 +21,7 @@ class World
 {
 public:
     Chunk *getChunk(int x, int z);
+    void saveAllChunks();
 
 private:
     std::map<std::pair<int, int>, Chunk> chunks_;

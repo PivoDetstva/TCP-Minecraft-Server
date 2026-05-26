@@ -1,5 +1,4 @@
 #pragma once
-#include "world.hpp"
 #include "NBT.hpp"
 #include "RegionFile.hpp"
 #include <filesystem>

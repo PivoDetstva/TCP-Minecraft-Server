@@ -2,7 +2,7 @@
 namespace mc::network
 {
     TcpClient::TcpClient(int socketFd, World &world)
-        : socketFd_(socketFd), playerX_(0.0), playerY_(64.0), playerZ_(0.0), lastChunkX_(0), lastChunkZ_(0)
+        : socketFd_(socketFd), playerX_(0.0), playerY_(64.0), playerZ_(0.0), lastChunkX_(0), lastChunkZ_(0), world_(world)
     {
     }
 
@@ -97,32 +97,18 @@ namespace mc::network
     }
     void TcpClient::sendFullInventory()
     {
+        if (!player_)
+            return;
+
         std::vector<uint8_t> data;
-        data.push_back(0); // Window ID 0 (Inventory)
 
-        uint16_t count = 45;
-        data.push_back((count >> 8) & 0xFF);
-        data.push_back(count & 0xFF);
+        mc::helper::writeInt8(data, 0);
+        mc::helper::writeInt16(data, 45);
 
-        for (int i = 0; i < 45; ++i)
+        for (const auto &slot : player_->inventory)
         {
-            if (i == 36) // this logic kinda sucks, need to change
-            {
-                data.push_back(0x01);
-                data.push_back(0x08); // ID
-                data.push_back(64);   // Count
-                data.push_back(0x00);
-                data.push_back(0x00); // Damage
-                data.push_back(0xFF);
-                data.push_back(0xFF); // NBT length -1
-            }
-            else
-            {
-                data.push_back(0xFF);
-                data.push_back(0xFF);
-            }
+            mc::helper::writeSlot(data, slot);
         }
-
         mc::protocol::Packet invPacket(0x30, data);
         auto bytes = invPacket.serialize();
         send(socketFd_, bytes.data(), bytes.size(), MSG_NOSIGNAL);
@@ -366,19 +352,109 @@ namespace mc::network
                         std::cout << "Player looked: " << yaw << " " << pitch << "\n";
                         break;
                     }
-                    default:
+                    case 0x07:
                     {
-                        std::cout << "Unknown packet in Play state: ID " << (int)packet.id << "\n";
-                        // all packets to deal with later.
-                        // 5 - mouse actions.
-                        // 11 animation packet.
-                        // 13 player abilities
-                        // 22 client settings
+                        size_t offset = 0;
+                        int8_t status = mc::helper::readByte(packet.data, offset);
+                        int32_t blockX = mc::helper::readInt32(packet.data, offset);
+                        uint8_t blockY = mc::helper::readByte(packet.data, offset);
+                        int32_t blockZ = mc::helper::readInt32(packet.data, offset);
+                        int8_t face = mc::helper::readByte(packet.data, offset);
+
+                        if (status != 2)
+                            break;
+
+                        int chunkX = blockX >> 4;
+                        int chunkZ = blockZ >> 4;
+                        int localX = blockX & 15;
+                        int localZ = blockZ & 15;
+
+                        Chunk *chunk = world_.getChunk(chunkX, chunkZ);
+                        chunk->blocks[(blockY * 16 + localZ) * 16 + localX] = 0;
+
+                        std::vector<uint8_t> blockChangeData;
+                        mc::helper::writeInt32(blockChangeData, blockX);
+                        blockChangeData.push_back(blockY);
+                        mc::helper::writeInt32(blockChangeData, blockZ);
+                        mc::helper::writeVarInt(blockChangeData, 1); // 0 = air avatar aang
+                        blockChangeData.push_back(0x00);             // metadata
+                        mc::protocol::Packet blockChange(0x23, blockChangeData);
+                        auto bcBytes = blockChange.serialize();
+                        send(socketFd_, bcBytes.data(), bcBytes.size(), MSG_NOSIGNAL);
+
+                        mc::world::saveChunk(chunkX, chunkZ, *chunk);
                         break;
                     }
+                    case 0x0F:
+                    {
+                        size_t offset = 0;
+                        int32_t blockX = mc::helper::readInt32(packet.data, offset);
+                        uint8_t blockY = mc::helper::readByte(packet.data, offset);
+                        int32_t blockZ = mc::helper::readInt32(packet.data, offset);
+                        int8_t face = mc::helper::readByte(packet.data, offset);
+                        // remaining fields (held item, cursor position) ignored for now
+
+                        if (face < 0 || face > 5)
+                            break;
+
+                        switch (face)
+                        {
+                        case 0:
+                            blockY -= 1;
+                            break; // bottom
+                        case 1:
+                            blockY += 1;
+                            break; // top
+                        case 2:
+                            blockZ -= 1;
+                            break; // north
+                        case 3:
+                            blockZ += 1;
+                            break; // south
+                        case 4:
+                            blockX -= 1;
+                            break; // west
+                        case 5:
+                            blockX += 1;
+                            break; // east
+                        }
+
+                        int chunkX = blockX >> 4;
+                        int chunkZ = blockZ >> 4;
+                        int localX = blockX & 15;
+                        int localZ = blockZ & 15;
+
+                        Chunk *chunk = world_.getChunk(chunkX, chunkZ);
+                        // hardcoded stone for now until inventory is properly tracked
+                        chunk->blocks[(blockY * 16 + localZ) * 16 + localX] = 1;
+
+                        std::vector<uint8_t> blockChangeData;
+                        mc::helper::writeInt32(blockChangeData, blockX);
+                        blockChangeData.push_back(blockY);
+                        mc::helper::writeInt32(blockChangeData, blockZ);
+                        mc::helper::writeVarInt(blockChangeData, 1); // id 1 = stone
+                        blockChangeData.push_back(0x00);             // metadata
+                        mc::protocol::Packet blockChange(0x23, blockChangeData);
+                        auto bcBytes = blockChange.serialize();
+                        send(socketFd_, bcBytes.data(), bcBytes.size(), MSG_NOSIGNAL);
+
+                        mc::world::saveChunk(chunkX, chunkZ, *chunk);
+                        break;
                     }
                     break;
+                    }
+                default:
+                {
+                    std::cout << "Unknown packet in Play state: ID " << (int)packet.id << "\n";
+                    // all packets to deal with later.
+                    // 5 - mouse actions.
+                    // 11 animation packet.
+                    // 13 player abilities
+                    // 22 client settings
+                    break;
                 }
+                }
+                break;
             }
         }
     }

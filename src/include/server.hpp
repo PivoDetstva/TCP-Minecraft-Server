@@ -9,6 +9,7 @@
 #include "client.hpp"
 #include "world.hpp"
 #include <thread>
+#include <atomic>
 namespace mc::network
 {
     class Server
@@ -17,6 +18,9 @@ namespace mc::network
         uint16_t port_;
         int socketFd_;
         World world_;
+        std::atomic<bool> running_;
+        std::thread consoleThread_;
+        void consoleLoop();
 
     public:
         Server() = default;

@@ -35,3 +35,10 @@ Chunk mc::world::loadChunk(int chunkX, int chunkZ)
     mc::world::parseChunkNBT(tag, ch);
     return ch;
 }
+void World::saveAllChunks()
+{
+    for (const auto &el : chunks_)
+    {
+        mc::world::saveChunk(el.first.first, el.first.second, el.second);
+    }
+}
